@@ -60,7 +60,7 @@ FileDir::FileDir(void)
 {
 	_fullPath = NULL;
 	_fileName = NULL;
-	_cachedFullPath = _cachedFileName = _cachedExtension = _cachedFileNameWithoutExtension = NULL;
+	_cachedFullPath = _cachedFileName = _cachedExtension = _cachedFileNameWithoutExtension = _cachedBasePath = NULL;
 	_isFolder = _isFile = false;
 }
 
@@ -82,6 +82,12 @@ FileDir::~FileDir(void)
 	{
 		delete [] _cachedFileNameWithoutExtension;
 		_cachedFileNameWithoutExtension = NULL;
+	}
+
+	if (_cachedBasePath)
+	{
+		delete [] _cachedBasePath;
+		_cachedBasePath = NULL;
 	}
 
 	_cachedFullPath = _cachedFileName = _cachedExtension = NULL;
@@ -180,4 +186,51 @@ const FILEDIR_CHAR * FileDir::GetFileNameWithoutExtension()
 	}
 
 	return _cachedFileNameWithoutExtension;
+}
+
+const FILEDIR_CHAR * FileDir::GetBasePath()
+{
+	if (_fullPath != _cachedFullPath)
+	{
+		_cachedFullPath = _fullPath;
+		_cachedBasePath = NULL;
+	}
+
+	if (!_fullPath) return NULL;
+
+	if (!_cachedBasePath)
+	{
+		FILEDIR_CHAR *separator1 = ustrrchr(_fullPath, '/');
+		FILEDIR_CHAR *separator2 = ustrrchr(_fullPath, '\\');
+		FILEDIR_CHAR *separator = separator1 > separator2 ? separator1 : separator2;
+
+		if (separator[1] == '\0')
+		{
+			if (separator == _fullPath)
+			{
+				separator = NULL;
+			}
+			else
+			{
+				separator1 = ustrrchr(separator - 1, '/');
+				separator2 = ustrrchr(separator - 1, '\\');
+				separator = separator1 > separator2 ? separator1 : separator2;
+			}
+		}
+
+		if (separator == NULL)
+		{
+			_cachedBasePath = (FILEDIR_CHAR *)malloc(sizeof(FILEDIR_CHAR));
+			_cachedBasePath[0] = '\0';
+		}
+		else
+		{
+			int len = separator - _fullPath + 1;
+			_cachedBasePath = (FILEDIR_CHAR *)malloc(sizeof(FILEDIR_CHAR) * (len + 1));
+			memcpy(_cachedBasePath, _fullPath, sizeof(FILEDIR_CHAR) * len);
+			_cachedBasePath[len] = '\0';
+		}
+	}
+
+	return _cachedBasePath;
 }

@@ -74,6 +74,13 @@ public:
 	const char * GetFileNameWithoutExtension();
 #endif
 
+	// Returns the path without the filename
+#ifdef _MSC_VER /* Wide char */
+	const wchar_t * GetBasePath();
+#else
+	const char * GetBasePath();
+#endif
+
 	// Is this a folder?
 	inline bool IsFolder() { return _isFolder; }
 
@@ -100,11 +107,13 @@ private:
 	wchar_t *_cachedFileName;
 	wchar_t *_cachedExtension;
 	wchar_t *_cachedFileNameWithoutExtension;
+	wchar_t *_cachedBasePath;
 #else /* UTF8 */
 	char *_cachedFullPath;
 	char *_cachedFileName;
 	char *_cachedExtension;
 	char *_cachedFileNameWithoutExtension;
+	char *_cachedBasePath;
 #endif
 };
 
