@@ -161,8 +161,8 @@ const FILEDIR_CHAR * FileDir::GetFileNameWithoutExtension()
 	}
 
 	if (!_fileName) return NULL;
-	
-	if (!_cachedExtension)
+
+	if (!_cachedFileNameWithoutExtension)
 	{
 		FILEDIR_CHAR *period = ustrrchr(_fileName, '.');
 		if (period == NULL)
