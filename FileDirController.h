@@ -45,7 +45,7 @@ class FileDirController
 {
 public:
 	FileDirController(void);
-	~FileDirController(void);
+	virtual ~FileDirController(void);
 
 #ifdef _MSC_VER /* Wide char */
 	bool EnumerateFilesAtPath(const wchar_t *path);
