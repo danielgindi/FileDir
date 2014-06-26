@@ -37,7 +37,7 @@ class FileDir
 	friend class FileDirController;
 public:
 	FileDir(void);
-	~FileDir(void);
+	virtual ~FileDir(void);
 
 	// Returns the full path including drive letter, base path, and file/folder name
 #ifdef _MSC_VER /* Wide char */
