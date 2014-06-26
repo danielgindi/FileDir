@@ -137,11 +137,11 @@ const FILEDIR_CHAR * FileDir::GetExtension()
 		FILEDIR_CHAR *period = ustrrchr(_fullPath, '.');
 		if (period == NULL)
 		{
-			return &(_fullPath[ustrlen(_fullPath)]);
+			_cachedExtension = &(_fullPath[ustrlen(_fullPath)]);
 		}
 		else
 		{
-			return period + 1;
+			_cachedExtension = period + 1;
 		}
 	}
 
