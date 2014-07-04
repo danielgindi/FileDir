@@ -231,6 +231,12 @@ FileDir * FileDirController::GetFileInfo(const FILEDIR_CHAR *path)
 #else
 	fileDir->_isFile = IS_REGULAR_FILE(fileStat.st_mode);
 	fileDir->_isFolder = IS_FOLDER(fileStat.st_mode);
+
+	fileDir->_creationTime = -1;
+	fileDir->_lastModificationTime = fileStat.st_mtime;
+	fileDir->_lastAccessTime = fileStat.st_atime;
+	fileDir->_lastStatusChangeTime = fileStat.st_ctime;
+	fileDir->_hasTimes = true;
 #endif
 
 	return fileDir;
@@ -318,15 +324,17 @@ FileDir * FileDirController::NextFile()
 #endif
 		
 #ifdef _MSC_VER
+	fileDir->_isFile = IS_REGULAR_FILE(_winFindData.dwFileAttributes);
 	fileDir->_isFolder = IS_FOLDER(_winFindData.dwFileAttributes);
 #else
-	fileDir->_isFolder = IS_FOLDER(fileStat.st_mode);
-#endif
-
-#ifdef _MSC_VER
-	fileDir->_isFile = IS_REGULAR_FILE(_winFindData.dwFileAttributes);
-#else
 	fileDir->_isFile = IS_REGULAR_FILE(fileStat.st_mode);
+	fileDir->_isFolder = IS_FOLDER(fileStat.st_mode);
+
+	fileDir->_creationTime = -1;
+	fileDir->_lastModificationTime = fileStat.st_mtime;
+	fileDir->_lastAccessTime = fileStat.st_atime;
+	fileDir->_lastStatusChangeTime = fileStat.st_ctime;
+	fileDir->_hasTimes = true;
 #endif
 
 	// Prepare for the next file

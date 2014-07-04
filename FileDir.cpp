@@ -62,6 +62,7 @@ FileDir::FileDir(void)
 	_fileName = NULL;
 	_cachedExtension = _cachedFileNameWithoutExtension = _cachedBasePath = NULL;
 	_isFolder = _isFile = false;
+	_hasTimes = false;
 }
 
 FileDir::~FileDir(void)
@@ -120,6 +121,8 @@ void FileDir::SetFullPath(const FILEDIR_CHAR *fullPath)
 	}
 
 	_cachedExtension = NULL;
+
+	_hasTimes = false;
 
 	if (fullPath)
 	{
@@ -225,4 +228,94 @@ const FILEDIR_CHAR * FileDir::GetBasePath()
 	}
 
 	return _cachedBasePath;
+}
+
+#ifdef _MSC_VER
+
+#define FILETIME_TO_TIME_T(FILETIME) (((((__int64)FILETIME.dwLowDateTime) | (((__int64)FILETIME.dwHighDateTime) << 32)) - 116444736000000000L) / 10000000L)
+
+bool windows_readTimes(const FILEDIR_CHAR *fullPath, time_t *creationTime, time_t *lastModificationTime, time_t *lastAccessTime, time_t *lastStatusChangeTime)
+{
+	bool success = false;
+	if (fullPath)
+	{
+		HANDLE hFile = CreateFile(fullPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+		if(hFile != INVALID_HANDLE_VALUE)
+		{
+			FILETIME ftCreate, ftAccess, ftWrite;
+			if (GetFileTime(hFile, &ftCreate, &ftAccess, &ftWrite))
+			{
+				*creationTime = FILETIME_TO_TIME_T(ftCreate);
+				*lastModificationTime = FILETIME_TO_TIME_T(ftWrite);
+				*lastAccessTime = FILETIME_TO_TIME_T(ftAccess);
+				*lastStatusChangeTime = -1;
+				success = true;
+			}
+
+			CloseHandle(hFile);
+		}
+	}
+	return success;
+}
+
+#endif
+
+time_t FileDir::GetLastModified()
+{
+#ifdef _MSC_VER
+	if (!_hasTimes && _fullPath)
+	{
+		_hasTimes = windows_readTimes(_fullPath, &_creationTime, &_lastModificationTime, &_lastAccessTime, &_lastStatusChangeTime);
+	}
+#endif
+	if (_hasTimes)
+	{
+		return _lastModificationTime;
+	}
+	return -1;
+}
+
+time_t FileDir::GetCreationTime()
+{
+#ifdef _MSC_VER
+	if (!_hasTimes && _fullPath)
+	{
+		_hasTimes = windows_readTimes(_fullPath, &_creationTime, &_lastModificationTime, &_lastAccessTime, &_lastStatusChangeTime);
+	}
+#endif
+	if (_hasTimes)
+	{
+		return _creationTime;
+	}
+	return -1;
+}
+
+time_t FileDir::GetLastAccessTime()
+{
+#ifdef _MSC_VER
+	if (!_hasTimes && _fullPath)
+	{
+		_hasTimes = windows_readTimes(_fullPath, &_creationTime, &_lastModificationTime, &_lastAccessTime, &_lastStatusChangeTime);
+	}
+#endif
+	if (_hasTimes)
+	{
+		return _lastAccessTime;
+	}
+	return -1;
+}
+
+time_t FileDir::GetLastStatusChangeTime()
+{
+#ifdef _MSC_VER
+	if (!_hasTimes && _fullPath)
+	{
+		_hasTimes = windows_readTimes(_fullPath, &_creationTime, &_lastModificationTime, &_lastAccessTime, &_lastStatusChangeTime);
+	}
+#endif
+	if (_hasTimes)
+	{
+		return _lastStatusChangeTime;
+	}
+	return -1;
 }

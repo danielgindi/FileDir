@@ -32,6 +32,8 @@
 
 #pragma once
 
+#include <ctime>
+
 class FileDir
 {
 	friend class FileDirController;
@@ -87,6 +89,18 @@ public:
 	// Is this a file?
 	inline bool IsFile() { return _isFile; }
 
+	// Get the last modified time
+	time_t GetLastModified();
+
+	// Get the creation time
+	time_t GetCreationTime();
+
+	// Get the last access time
+	time_t GetLastAccessTime();
+
+	// Get the last status change time
+	time_t GetLastStatusChangeTime();
+
 private:
 
 #ifdef _MSC_VER /* Wide char */
@@ -99,7 +113,12 @@ private:
 
 	bool _isFolder;
 	bool _isFile;
+	bool _hasTimes;
 
+	time_t _creationTime;
+	time_t _lastModificationTime;
+	time_t _lastAccessTime;
+	time_t _lastStatusChangeTime;
 
 #ifdef _MSC_VER /* Wide char */
 	wchar_t *_cachedExtension;
