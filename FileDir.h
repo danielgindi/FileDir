@@ -102,14 +102,10 @@ private:
 
 
 #ifdef _MSC_VER /* Wide char */
-	wchar_t *_cachedFullPath;
-	wchar_t *_cachedFileName;
 	wchar_t *_cachedExtension;
 	wchar_t *_cachedFileNameWithoutExtension;
 	wchar_t *_cachedBasePath;
 #else /* UTF8 */
-	char *_cachedFullPath;
-	char *_cachedFileName;
 	char *_cachedExtension;
 	char *_cachedFileNameWithoutExtension;
 	char *_cachedBasePath;
