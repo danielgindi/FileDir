@@ -87,7 +87,7 @@ public:
 	// Is this a file?
 	inline bool IsFile() { return _isFile; }
 
-public:
+private:
 
 #ifdef _MSC_VER /* Wide char */
 	wchar_t *_fullPath;
@@ -100,7 +100,6 @@ public:
 	bool _isFolder;
 	bool _isFile;
 
-private:
 
 #ifdef _MSC_VER /* Wide char */
 	wchar_t *_cachedFullPath;
