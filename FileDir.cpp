@@ -60,7 +60,7 @@ FileDir::FileDir(void)
 {
 	_fullPath = NULL;
 	_fileName = NULL;
-	_cachedFullPath = _cachedFileName = _cachedExtension = _cachedFileNameWithoutExtension = _cachedBasePath = NULL;
+	_cachedExtension = _cachedFileNameWithoutExtension = _cachedBasePath = NULL;
 	_isFolder = _isFile = false;
 }
 
@@ -68,44 +68,58 @@ FileDir::~FileDir(void)
 {
 	if (_fullPath)
 	{
-		delete [] _fullPath;
+		free(_fullPath);
 		_fullPath = NULL;
 	}
 
 	if (_fileName)
 	{
-		delete [] _fileName;
+		free(_fileName);
 		_fileName = NULL;
 	}
 
 	if (_cachedFileNameWithoutExtension)
 	{
-		delete [] _cachedFileNameWithoutExtension;
+		free(_cachedFileNameWithoutExtension);
 		_cachedFileNameWithoutExtension = NULL;
 	}
 
 	if (_cachedBasePath)
 	{
-		delete [] _cachedBasePath;
+		free(_cachedBasePath);
 		_cachedBasePath = NULL;
 	}
 
-	_cachedFullPath = _cachedFileName = _cachedExtension = NULL;
+	_cachedExtension = NULL;
 }
 
 void FileDir::SetFullPath(const FILEDIR_CHAR *fullPath)
 {
 	if (_fullPath)
 	{
-		delete [] _fullPath;
+		free(_fullPath);
 		_fullPath = NULL;
 	}
 
 	if (_fileName)
 	{
-		delete [] _fileName;
+		free(_fileName);
 		_fileName = NULL;
 	}
+
+	if (_cachedFileNameWithoutExtension)
+	{
+		free(_cachedFileNameWithoutExtension);
+		_cachedFileNameWithoutExtension = NULL;
+	}
+
+	if (_cachedBasePath)
+	{
+		free(_cachedBasePath);
+		_cachedBasePath = NULL;
+	}
+
+	_cachedExtension = NULL;
 
 	if (fullPath)
 	{
@@ -130,12 +144,6 @@ void FileDir::SetFullPath(const FILEDIR_CHAR *fullPath)
 
 const FILEDIR_CHAR * FileDir::GetExtension()
 {
-	if (_fullPath != _cachedFullPath)
-	{
-		_cachedFullPath = _fullPath;
-		_cachedExtension = NULL;
-	}
-	
 	if (!_fullPath) return NULL;
 
 	if (!_cachedExtension)
@@ -156,16 +164,6 @@ const FILEDIR_CHAR * FileDir::GetExtension()
 
 const FILEDIR_CHAR * FileDir::GetFileNameWithoutExtension()
 {
-	if (_fileName != _cachedFileName)
-	{
-		_cachedFileName = _fileName;
-		if (_cachedFileNameWithoutExtension)
-		{
-			delete [] _cachedFileNameWithoutExtension;
-			_cachedFileNameWithoutExtension = NULL;
-		}
-	}
-
 	if (!_fileName) return NULL;
 
 	if (!_cachedFileNameWithoutExtension)
@@ -178,7 +176,7 @@ const FILEDIR_CHAR * FileDir::GetFileNameWithoutExtension()
 		else
 		{
 			int periodIndex = (int)(period - _fileName);
-			FILEDIR_CHAR *fileNameWithoutExtension = new FILEDIR_CHAR[periodIndex + 1];
+			FILEDIR_CHAR *fileNameWithoutExtension = (FILEDIR_CHAR *)malloc(sizeof(FILEDIR_CHAR) * (periodIndex + 1));
 			memcpy(fileNameWithoutExtension, _fileName, sizeof(FILEDIR_CHAR) * periodIndex);
 			fileNameWithoutExtension[periodIndex] = '\0';
 			_cachedFileNameWithoutExtension = fileNameWithoutExtension;
@@ -190,12 +188,6 @@ const FILEDIR_CHAR * FileDir::GetFileNameWithoutExtension()
 
 const FILEDIR_CHAR * FileDir::GetBasePath()
 {
-	if (_fullPath != _cachedFullPath)
-	{
-		_cachedFullPath = _fullPath;
-		_cachedBasePath = NULL;
-	}
-
 	if (!_fullPath) return NULL;
 
 	if (!_cachedBasePath)
