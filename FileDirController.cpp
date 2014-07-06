@@ -184,6 +184,8 @@ bool FileDirController::EnumerateFilesAtPath(const FILEDIR_CHAR *path)
 
 		if (_unixFindDirEntry == NULL)
 		{
+			closedir(_unixFindDir);
+			_unixFindDir = NULL;
 			_hasNext = false;
 		}
 	}
