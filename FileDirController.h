@@ -54,9 +54,9 @@ public:
 #endif
 	FileDir * NextFile();
 #ifdef _MSC_VER /* Wide char */
-	FileDir * GetFileInfo(const wchar_t *path);
+	static FileDir * GetFileInfo(const wchar_t *path);
 #else /* UTF8 */
-	FileDir * GetFileInfo(const char *path);
+	static FileDir * GetFileInfo(const char *path);
 #endif
 	void Close();
 
