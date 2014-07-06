@@ -283,10 +283,10 @@ FileDir * FileDirController::NextFile()
 	fileNameLength = (int)strlen(_unixFindDirEntry->d_name);
 #endif
 
-	int fullPathLength = _basePathLength + 1 + fileNameLength;
-    
-    bool addSlash = _basePath[_basePathLength - 1] != '/' && _basePath[_basePathLength - 1] != '\\';
-    int slashLength = addSlash ? 1 : 0;
+	bool addSlash = _basePath[_basePathLength - 1] != '/' && _basePath[_basePathLength - 1] != '\\';
+	int slashLength = addSlash ? 1 : 0;
+
+	int fullPathLength = _basePathLength + slashLength + fileNameLength;
 
 #ifdef _MSC_VER
 	wchar_t *filePath = new FILEDIR_CHAR[fullPathLength + 1];
@@ -296,7 +296,7 @@ FileDir * FileDirController::NextFile()
         filePath[_basePathLength] = '\\';
     }
 	memcpy(filePath + _basePathLength + slashLength, _winFindData.cFileName, sizeof(FILEDIR_CHAR) * fileNameLength);
-	filePath[_basePathLength + slashLength + fileNameLength] = '\0';
+	filePath[fullPathLength] = '\0';
 #else
 	char *filePath = new FILEDIR_CHAR[fullPathLength + 1];
 	memcpy(filePath, _basePath, sizeof(FILEDIR_CHAR) * _basePathLength);
@@ -305,7 +305,7 @@ FileDir * FileDirController::NextFile()
         filePath[_basePathLength] = '/';
     }
 	memcpy(filePath + _basePathLength + slashLength, _unixFindDirEntry->d_name, sizeof(FILEDIR_CHAR) * fileNameLength);
-	filePath[_basePathLength + slashLength + fileNameLength] = '\0';
+	filePath[fullPathLength] = '\0';
 #endif
 
 #ifndef _MSC_VER
