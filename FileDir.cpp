@@ -220,7 +220,7 @@ const FILEDIR_CHAR * FileDir::GetBasePath()
 		}
 		else
 		{
-			int len = separator - _fullPath + 1;
+			int len = (int)(separator - _fullPath + 1);
 			_cachedBasePath = (FILEDIR_CHAR *)malloc(sizeof(FILEDIR_CHAR) * (len + 1));
 			memcpy(_cachedBasePath, _fullPath, sizeof(FILEDIR_CHAR) * len);
 			_cachedBasePath[len] = '\0';
