@@ -35,14 +35,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _MSC_VER
+#ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
 
 #ifndef FILEDIR_CHAR
 
-#ifdef _MSC_VER
+#ifdef WIN32
 #define FILEDIR_CHAR wchar_t
 #define ustrrchr wcsrchr
 #define ustrlen wcslen
@@ -230,7 +230,7 @@ const FILEDIR_CHAR * FileDir::GetBasePath()
 	return _cachedBasePath;
 }
 
-#ifdef _MSC_VER
+#ifdef WIN32
 
 #define FILETIME_TO_TIME_T(FILETIME) (((((__int64)FILETIME.dwLowDateTime) | (((__int64)FILETIME.dwHighDateTime) << 32)) - 116444736000000000L) / 10000000L)
 
@@ -262,7 +262,7 @@ bool windows_readTimes(const FILEDIR_CHAR *fullPath, time_t *creationTime, time_
 
 time_t FileDir::GetLastModified()
 {
-#ifdef _MSC_VER
+#ifdef WIN32
 	if (!_hasTimes && _fullPath)
 	{
 		_hasTimes = windows_readTimes(_fullPath, &_creationTime, &_lastModificationTime, &_lastAccessTime, &_lastStatusChangeTime);
@@ -277,7 +277,7 @@ time_t FileDir::GetLastModified()
 
 time_t FileDir::GetCreationTime()
 {
-#ifdef _MSC_VER
+#ifdef WIN32
 	if (!_hasTimes && _fullPath)
 	{
 		_hasTimes = windows_readTimes(_fullPath, &_creationTime, &_lastModificationTime, &_lastAccessTime, &_lastStatusChangeTime);
@@ -292,7 +292,7 @@ time_t FileDir::GetCreationTime()
 
 time_t FileDir::GetLastAccessTime()
 {
-#ifdef _MSC_VER
+#ifdef WIN32
 	if (!_hasTimes && _fullPath)
 	{
 		_hasTimes = windows_readTimes(_fullPath, &_creationTime, &_lastModificationTime, &_lastAccessTime, &_lastStatusChangeTime);
@@ -307,7 +307,7 @@ time_t FileDir::GetLastAccessTime()
 
 time_t FileDir::GetLastStatusChangeTime()
 {
-#ifdef _MSC_VER
+#ifdef WIN32
 	if (!_hasTimes && _fullPath)
 	{
 		_hasTimes = windows_readTimes(_fullPath, &_creationTime, &_lastModificationTime, &_lastAccessTime, &_lastStatusChangeTime);
