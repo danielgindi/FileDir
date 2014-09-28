@@ -34,12 +34,14 @@
 
 #include "FileDir.h"
 
-#ifdef _MSC_VER
+#ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #else
 #include <dirent.h>
 #endif
+
+#include <list>
 
 class FileDirController
 {
@@ -47,38 +49,24 @@ public:
 	FileDirController(void);
 	virtual ~FileDirController(void);
 
-#ifdef _MSC_VER /* Wide char */
-	bool EnumerateFilesAtPath(const wchar_t *path);
+#ifdef WIN32 /* Wide char */
+	bool EnumerateFilesAtPath(const wchar_t *path, bool recursive = false);
 #else /* UTF8 */
-	bool EnumerateFilesAtPath(const char *path);
+	bool EnumerateFilesAtPath(const char *path, bool recursive = false);
 #endif
 	FileDir * NextFile();
-#ifdef _MSC_VER /* Wide char */
+#ifdef WIN32 /* Wide char */
 	static FileDir * GetFileInfo(const wchar_t *path);
 #else /* UTF8 */
 	static FileDir * GetFileInfo(const char *path);
 #endif
 	void Close();
 
-	inline bool HasNext() { return _hasNext; }
+	inline bool HasNext() { return !_searchTree.empty(); }
 
 private:
-	bool _hasNext;
+	bool _isRecursive;
 
-#ifdef _MSC_VER /* Wide char */
-	wchar_t *_basePath;
-#else /* UTF8 */
-	char *_basePath;
-#endif
-
-	int _basePathLength;
-	
-#ifdef _MSC_VER
-	HANDLE _winFindHandle;
-	WIN32_FIND_DATAW _winFindData;
-#else
-	DIR *_unixFindDir;
-	dirent *_unixFindDirEntry;
-#endif
+	std::list<void *> _searchTree;
 };
 

@@ -37,7 +37,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _MSC_VER
+#ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #pragma warning (disable : 4996)
@@ -47,7 +47,7 @@
 #include <sys/stat.h>
 #endif
 
-#ifdef _MSC_VER
+#ifdef WIN32
 
 #ifdef FILE_ATTRIBUTE_INTEGRITY_STREAM
 #define IS_REGULAR_FILE_HAS_ATTRIBUTE_INTEGRITY_STREAM(dwFileAttributes) (!!(dwFileAttributes & FILE_ATTRIBUTE_INTEGRITY_STREAM))
@@ -78,7 +78,7 @@
 #define IS_REGULAR_FILE(statMode) S_ISREG(statMode)	
 #endif
 
-#ifdef _MSC_VER
+#ifdef WIN32
 #define IS_FOLDER(dwFileAttributes) (!!(dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
 #else
 #define IS_FOLDER(statMode) S_ISDIR(statMode)	
@@ -87,7 +87,7 @@
 
 #ifndef FILEDIR_CHAR
 
-#ifdef _MSC_VER
+#ifdef WIN32
 #define FILEDIR_CHAR wchar_t
 #define ustrrchr wcsrchr
 #define ustrlen (int)wcslen
@@ -101,18 +101,138 @@
 
 #endif
 
+#ifdef WIN32
+typedef struct _find_data_t {
+	_find_data_t()
+	{
+		handle = INVALID_HANDLE_VALUE;
+		memset(&data, 0, sizeof(data));
+		hasNext = false;
+		basePath = NULL;
+		basePathLength = 0;
+	}
+	void release()
+	{
+		if (handle != INVALID_HANDLE_VALUE)
+		{
+			FindClose(handle);
+		}
+		if (basePath)
+		{
+			delete [] basePath;
+		}
+	}
+
+	HANDLE handle;
+	WIN32_FIND_DATAW data;
+	bool hasNext;
+	wchar_t *basePath;
+	int basePathLength;
+} find_data_t;
+#else
+typedef struct _find_data_t {
+	_find_data_t()
+	{
+		dir = NULL;
+		entry = NULL;
+		hasNext = false;
+		basePath = NULL;
+		basePathLength = 0;
+	}
+	void release()
+	{
+		if (dir)
+		{
+			closedir(dir);
+		}
+		if (basePath)
+		{
+			delete [] basePath;
+		}
+	}
+
+	DIR *dir;
+	dirent *entry;
+	bool hasNext;
+	char *basePath;
+	int basePathLength;
+} find_data_t;
+#endif
+
+static find_data_t *openFolderForSearch(const FILEDIR_CHAR *path)
+{
+	find_data_t *data = new find_data_t();
+	
+	int pathLen = ustrlen(path);
+
+#ifdef WIN32
+	data->basePath = new FILEDIR_CHAR[pathLen + 3];
+	memcpy((void *)data->basePath, path, sizeof(FILEDIR_CHAR) * pathLen);
+	data->basePathLength = pathLen;
+	data->basePath[data->basePathLength] = '\\';
+	data->basePath[data->basePathLength + 1] = '*';
+	data->basePath[data->basePathLength + 2] = '\0';
+#else
+	data->basePath = new FILEDIR_CHAR[pathLen + 1];
+	memcpy(data->basePath, path, sizeof(FILEDIR_CHAR) * (pathLen + 1));
+	data->basePathLength = pathLen;
+#endif
+
+#ifdef WIN32
+
+	data->handle = FindFirstFileW(data->basePath, &data->data);
+
+	data->basePath[data->basePathLength] = '\0';
+	data->hasNext = data->handle != INVALID_HANDLE_VALUE;
+
+	while (data->handle != INVALID_HANDLE_VALUE && data->data.cFileName[0] == '.' && 
+		(data->data.cFileName[1] == '\0' || 
+		(data->data.cFileName[1] == '.' && data->data.cFileName[2] == '\0')))
+	{
+		if (FindNextFileW(data->handle, &data->data) == 0)
+		{
+			data->hasNext = false;
+			break;
+		}
+	}
+
+	if (data->handle == INVALID_HANDLE_VALUE)
+	{
+		data->release();
+		delete data;
+		data = NULL;
+	}
+
+#else
+
+	data->dir = opendir(path);
+	if (data->dir != NULL && (data->entry = readdir(data->dir)))
+	{
+		while (data->entry && data->entry->d_name[0] == '.' && 
+			(data->entry->d_name[1] == '\0' || 
+			(data->entry->d_name[1] == '.' && data->entry->d_name[2] == '\0')))
+		{
+			data->entry = readdir(data->dir);
+		}
+
+		data->hasNext = data->entry != NULL;
+	}
+	else
+	{
+		data->release();
+		delete data;
+		data = NULL;
+	}
+
+#endif
+
+	return data;
+}
+
 FileDirController::FileDirController(void)
 {
-	_hasNext = false;
-	_basePath = NULL;
-	_basePathLength = 0;
-#ifdef _MSC_VER
-	_winFindHandle = INVALID_HANDLE_VALUE;
-	memset(&_winFindData, 0, sizeof(_winFindData));
-#else
-	_unixFindDir = NULL;
-	_unixFindDirEntry = NULL;
-#endif
+	_isRecursive = false;
+	Close();
 }
 
 FileDirController::~FileDirController(void)
@@ -120,86 +240,38 @@ FileDirController::~FileDirController(void)
 	Close();
 }
 
-bool FileDirController::EnumerateFilesAtPath(const FILEDIR_CHAR *path)
+bool FileDirController::EnumerateFilesAtPath(const FILEDIR_CHAR *path, bool recursive/* = false*/)
 {
 	Close();
 
+	_isRecursive = recursive;
+
 	if (!path) return false;
 
-	bool success = false;
-
-	int pathLen = ustrlen(path);
-
-#ifdef _MSC_VER
-	_basePath = new FILEDIR_CHAR[pathLen + 3];
-	memcpy(_basePath, path, sizeof(FILEDIR_CHAR) * pathLen);
-	_basePathLength = pathLen;
-	_basePath[_basePathLength] = '\\';
-	_basePath[_basePathLength + 1] = '*';
-	_basePath[_basePathLength + 2] = '\0';
-#else
-	_basePath = new FILEDIR_CHAR[pathLen + 1];
-	memcpy(_basePath, path, sizeof(FILEDIR_CHAR) * (pathLen + 1));
-	_basePathLength = pathLen;
-#endif
-
-#ifdef _MSC_VER
-
-	_winFindHandle = FindFirstFileW(_basePath, &_winFindData);
-
-	_basePath[_basePathLength] = '\0';
-
-	while (_winFindHandle != INVALID_HANDLE_VALUE && _winFindData.cFileName[0] == '.' && 
-													(_winFindData.cFileName[1] == '\0' || 
-													(_winFindData.cFileName[1] == '.' && _winFindData.cFileName[2] == '\0')))
+	find_data_t *find = openFolderForSearch(path);
+	if (find)
 	{
-		if (FindNextFileW(_winFindHandle, &_winFindData) == 0)
+		if (find->hasNext)
 		{
-			FindClose(_winFindHandle);
-			_winFindHandle = INVALID_HANDLE_VALUE;
+			_searchTree.push_back((void *)find);
 		}
-	}
-
-	if (_winFindHandle != INVALID_HANDLE_VALUE)
-	{
-		success = true;
-		_hasNext = true;
-	}
-
-#else
-	_unixFindDir = opendir(path);
-	if (_unixFindDir != NULL)
-	{
-		success = true;
-		_hasNext = true;
-
-		_unixFindDirEntry = readdir(_unixFindDir);
-
-		while (_unixFindDirEntry && _unixFindDirEntry->d_name[0] == '.' && 
-			(_unixFindDirEntry->d_name[1] == '\0' || 
-			(_unixFindDirEntry->d_name[1] == '.' && _unixFindDirEntry->d_name[2] == '\0')))
+		else
 		{
-			_unixFindDirEntry = readdir(_unixFindDir);
+			find->release();
+			delete find;
 		}
 
-		if (_unixFindDirEntry == NULL)
-		{
-			closedir(_unixFindDir);
-			_unixFindDir = NULL;
-			_hasNext = false;
-		}
+		return true;
 	}
 
-#endif
-
-	return success;
+	return false;
 }
 
 FileDir * FileDirController::GetFileInfo(const FILEDIR_CHAR *path)
 {
 	if (!path || path[0] == '\0') return NULL;
 
-#ifdef _MSC_VER
+#ifdef WIN32
 	DWORD dwFileAttributes = GetFileAttributes(path);
 	if (dwFileAttributes == INVALID_FILE_ATTRIBUTES)
 	{
@@ -227,7 +299,7 @@ FileDir * FileDirController::GetFileInfo(const FILEDIR_CHAR *path)
 		fileDir->_fileName = ustrdup(path);
 	}
 
-#ifdef _MSC_VER
+#ifdef WIN32
 	fileDir->_isFile = IS_REGULAR_FILE(dwFileAttributes);
 	fileDir->_isFolder = IS_FOLDER(dwFileAttributes);
 #else
@@ -246,69 +318,54 @@ FileDir * FileDirController::GetFileInfo(const FILEDIR_CHAR *path)
 
 void FileDirController::Close()
 {
-#ifdef _MSC_VER
-	if (_winFindHandle != INVALID_HANDLE_VALUE)
+	for (std::list<void *>::iterator it = _searchTree.begin(), itEnd = _searchTree.end(); it != itEnd; it++)
 	{
-		FindClose(_winFindHandle);
+		find_data_t *data = (find_data_t *)*it;
+		data->release();
+		delete data;
 	}
-	_winFindHandle = INVALID_HANDLE_VALUE;
-	memset(&_winFindData, 0, sizeof(_winFindData));
-#else
-	if (_unixFindDir)
-	{
-		closedir(_unixFindDir);
-	}
-	_unixFindDir = NULL;
-	_unixFindDirEntry = NULL;
-#endif
-
-	if (_basePath)
-	{
-		delete [] _basePath;
-		_basePath = NULL;
-		_basePathLength = 0;
-	}
-
-	_hasNext = false;
+	_searchTree.clear();
 }
 
 FileDir * FileDirController::NextFile()
 {
-	if (!_hasNext) return NULL;
+	if (_searchTree.empty()) return NULL;
 	
+	find_data_t *find = (find_data_t *)_searchTree.back();
+		
 	int fileNameLength;
-#ifdef _MSC_VER
-	fileNameLength = (int)wcslen(_winFindData.cFileName);
+#ifdef WIN32
+	fileNameLength = (int)wcslen(find->data.cFileName);
 #else
-	fileNameLength = (int)strlen(_unixFindDirEntry->d_name);
+	fileNameLength = (int)strlen(find->entry->d_name);
 #endif
 
-	bool addSlash = _basePath[_basePathLength - 1] != '/' && _basePath[_basePathLength - 1] != '\\';
+	bool addSlash = find->basePath[find->basePathLength - 1] != '/' && find->basePath[find->basePathLength - 1] != '\\';
 	int slashLength = addSlash ? 1 : 0;
 
-	int fullPathLength = _basePathLength + slashLength + fileNameLength;
+	int fullPathLength = find->basePathLength + slashLength + fileNameLength;
 
-#ifdef _MSC_VER
+#ifdef WIN32
 	wchar_t *filePath = new FILEDIR_CHAR[fullPathLength + 1];
-	memcpy(filePath, _basePath, sizeof(FILEDIR_CHAR) * _basePathLength);
-    if (addSlash)
-    {
-        filePath[_basePathLength] = '\\';
-    }
-	memcpy(filePath + _basePathLength + slashLength, _winFindData.cFileName, sizeof(FILEDIR_CHAR) * fileNameLength);
+	memcpy(filePath, find->basePath, sizeof(FILEDIR_CHAR) * find->basePathLength);
+	if (addSlash)
+	{
+		filePath[find->basePathLength] = '\\';
+	}
+	memcpy(filePath + find->basePathLength + slashLength, find->data.cFileName, sizeof(FILEDIR_CHAR) * fileNameLength);
 	filePath[fullPathLength] = '\0';
 #else
 	char *filePath = new FILEDIR_CHAR[fullPathLength + 1];
-	memcpy(filePath, _basePath, sizeof(FILEDIR_CHAR) * _basePathLength);
-    if (addSlash)
-    {
-        filePath[_basePathLength] = '/';
-    }
-	memcpy(filePath + _basePathLength + slashLength, _unixFindDirEntry->d_name, sizeof(FILEDIR_CHAR) * fileNameLength);
+	memcpy(filePath, find->basePath, sizeof(FILEDIR_CHAR) * find->basePathLength);
+	if (addSlash)
+	{
+		filePath[find->basePathLength] = '/';
+	}
+	memcpy(filePath + find->basePathLength + slashLength, find->entry->d_name, sizeof(FILEDIR_CHAR) * fileNameLength);
 	filePath[fullPathLength] = '\0';
 #endif
 
-#ifndef _MSC_VER
+#ifndef WIN32
 	struct stat fileStat;
 	if (stat(filePath, &fileStat) == -1)
 	{
@@ -319,15 +376,15 @@ FileDir * FileDirController::NextFile()
 
 	FileDir *fileDir = new FileDir();
 	fileDir->_fullPath = filePath;
-#ifdef _MSC_VER
-	fileDir->_fileName = wcsdup(_winFindData.cFileName); // Copy from the struct's memory
+#ifdef WIN32
+	fileDir->_fileName = wcsdup(find->data.cFileName); // Copy from the struct's memory
 #else
-	fileDir->_fileName = strdup(_unixFindDirEntry->d_name); // Copy from statically allocated memory
+	fileDir->_fileName = strdup(find->entry->d_name); // Copy from statically allocated memory
 #endif
-		
-#ifdef _MSC_VER
-	fileDir->_isFile = IS_REGULAR_FILE(_winFindData.dwFileAttributes);
-	fileDir->_isFolder = IS_FOLDER(_winFindData.dwFileAttributes);
+
+#ifdef WIN32
+	fileDir->_isFile = IS_REGULAR_FILE(find->data.dwFileAttributes);
+	fileDir->_isFolder = IS_FOLDER(find->data.dwFileAttributes);
 #else
 	fileDir->_isFile = IS_REGULAR_FILE(fileStat.st_mode);
 	fileDir->_isFolder = IS_FOLDER(fileStat.st_mode);
@@ -340,18 +397,38 @@ FileDir * FileDirController::NextFile()
 #endif
 
 	// Prepare for the next file
-#ifdef _MSC_VER
-	if (FindNextFileW(_winFindHandle, &_winFindData) == 0)
+#ifdef WIN32
+	if (FindNextFileW(find->handle, &find->data) == 0)
 	{
-		_hasNext = false;
+		find->release();
+		delete find;
+		_searchTree.pop_back();
 	}
 #else
-	_unixFindDirEntry = readdir(_unixFindDir);
-	if (_unixFindDirEntry == NULL)
+	find->entry = readdir(find->dir);
+	if (find->entry == NULL)
 	{
-		_hasNext = false;
+		find->release();
+		delete find;
+		_searchTree.pop_back();
 	}
 #endif
+
+	if (_isRecursive && fileDir->_isFolder)
+	{
+		find = openFolderForSearch(fileDir->GetFullPath());
+		if (find)
+		{
+			if (find->hasNext)
+			{
+				_searchTree.push_back((void *)find);
+			}
+			else
+			{
+				delete find;
+			}
+		}
+	}
 
 	return fileDir;
 }
