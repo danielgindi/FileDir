@@ -34,7 +34,7 @@
 
 #include "FileDir.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #else
@@ -49,13 +49,13 @@ public:
 	FileDirController(void);
 	virtual ~FileDirController(void);
 
-#ifdef WIN32 /* Wide char */
+#ifdef _WIN32 /* Wide char */
 	bool EnumerateFilesAtPath(const wchar_t *path, bool recursive = false);
 #else /* UTF8 */
 	bool EnumerateFilesAtPath(const char *path, bool recursive = false);
 #endif
 	FileDir * NextFile();
-#ifdef WIN32 /* Wide char */
+#ifdef _WIN32 /* Wide char */
 	static FileDir * GetFileInfo(const wchar_t *path);
 #else /* UTF8 */
 	static FileDir * GetFileInfo(const char *path);
