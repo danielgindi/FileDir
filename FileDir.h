@@ -42,42 +42,42 @@ public:
 	virtual ~FileDir(void);
 
 	// Returns the full path including drive letter, base path, and file/folder name
-#ifdef WIN32 /* Wide char */
+#ifdef _WIN32 /* Wide char */
 	inline const wchar_t * GetFullPath() { return _fullPath; }
 #else
 	inline const char * GetFullPath() { return _fullPath; }
 #endif
 
 	// Sets the full path including drive letter, base path, and file/folder name
-#ifdef WIN32 /* Wide char */
+#ifdef _WIN32 /* Wide char */
 	void SetFullPath(const wchar_t *fullPath);
 #else
 	void SetFullPath(const char *fullPath);
 #endif
 
 	// Returns the file name including extension, without base path
-#ifdef WIN32 /* Wide char */
+#ifdef _WIN32 /* Wide char */
 	inline const wchar_t * GetFileName() { return _fileName; }
 #else
 	inline const char * GetFileName() { return _fileName; }
 #endif
 
 	// Returns the extension without the period
-#ifdef WIN32 /* Wide char */
+#ifdef _WIN32 /* Wide char */
 	const wchar_t * GetExtension();
 #else
 	const char * GetExtension();
 #endif
 
 	// Returns the file name without the extension
-#ifdef WIN32 /* Wide char */
+#ifdef _WIN32 /* Wide char */
 	const wchar_t * GetFileNameWithoutExtension();
 #else
 	const char * GetFileNameWithoutExtension();
 #endif
 
 	// Returns the path without the filename
-#ifdef WIN32 /* Wide char */
+#ifdef _WIN32 /* Wide char */
 	const wchar_t * GetBasePath();
 #else
 	const char * GetBasePath();
@@ -103,7 +103,7 @@ public:
 
 private:
 
-#ifdef WIN32 /* Wide char */
+#ifdef _WIN32 /* Wide char */
 	wchar_t *_fullPath;
 	wchar_t *_fileName;
 #else /* UTF8 */
@@ -120,7 +120,7 @@ private:
 	time_t _lastAccessTime;
 	time_t _lastStatusChangeTime;
 
-#ifdef WIN32 /* Wide char */
+#ifdef _WIN32 /* Wide char */
 	wchar_t *_cachedExtension;
 	wchar_t *_cachedFileNameWithoutExtension;
 	wchar_t *_cachedBasePath;
