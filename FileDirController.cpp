@@ -37,7 +37,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #pragma warning (disable : 4996)
@@ -47,7 +47,7 @@
 #include <sys/stat.h>
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 
 #ifdef FILE_ATTRIBUTE_INTEGRITY_STREAM
 #define IS_REGULAR_FILE_HAS_ATTRIBUTE_INTEGRITY_STREAM(dwFileAttributes) (!!(dwFileAttributes & FILE_ATTRIBUTE_INTEGRITY_STREAM))
@@ -75,19 +75,19 @@
 	) \
 	)
 #else
-#define IS_REGULAR_FILE(statMode) S_ISREG(statMode)	
+#define IS_REGULAR_FILE(statMode) S_ISREG(statMode)
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #define IS_FOLDER(dwFileAttributes) (!!(dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
 #else
-#define IS_FOLDER(statMode) S_ISDIR(statMode)	
+#define IS_FOLDER(statMode) S_ISDIR(statMode)
 #endif
 
 
 #ifndef FILEDIR_CHAR
 
-#ifdef WIN32
+#ifdef _WIN32
 #define FILEDIR_CHAR wchar_t
 #define ustrrchr wcsrchr
 #define ustrlen (int)wcslen
@@ -101,7 +101,7 @@
 
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 typedef struct _find_data_t {
 	_find_data_t()
 	{
@@ -162,10 +162,10 @@ typedef struct _find_data_t {
 static find_data_t *openFolderForSearch(const FILEDIR_CHAR *path)
 {
 	find_data_t *data = new find_data_t();
-	
+
 	int pathLen = ustrlen(path);
 
-#ifdef WIN32
+#ifdef _WIN32
 	data->basePath = new FILEDIR_CHAR[pathLen + 3];
 	memcpy((void *)data->basePath, path, sizeof(FILEDIR_CHAR) * pathLen);
 	data->basePathLength = pathLen;
@@ -178,15 +178,15 @@ static find_data_t *openFolderForSearch(const FILEDIR_CHAR *path)
 	data->basePathLength = pathLen;
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 
 	data->handle = FindFirstFileW(data->basePath, &data->data);
 
 	data->basePath[data->basePathLength] = '\0';
 	data->hasNext = data->handle != INVALID_HANDLE_VALUE;
 
-	while (data->handle != INVALID_HANDLE_VALUE && data->data.cFileName[0] == '.' && 
-		(data->data.cFileName[1] == '\0' || 
+	while (data->handle != INVALID_HANDLE_VALUE && data->data.cFileName[0] == '.' &&
+		(data->data.cFileName[1] == '\0' ||
 		(data->data.cFileName[1] == '.' && data->data.cFileName[2] == '\0')))
 	{
 		if (FindNextFileW(data->handle, &data->data) == 0)
@@ -208,8 +208,8 @@ static find_data_t *openFolderForSearch(const FILEDIR_CHAR *path)
 	data->dir = opendir(path);
 	if (data->dir != NULL && (data->entry = readdir(data->dir)))
 	{
-		while (data->entry && data->entry->d_name[0] == '.' && 
-			(data->entry->d_name[1] == '\0' || 
+		while (data->entry && data->entry->d_name[0] == '.' &&
+			(data->entry->d_name[1] == '\0' ||
 			(data->entry->d_name[1] == '.' && data->entry->d_name[2] == '\0')))
 		{
 			data->entry = readdir(data->dir);
@@ -271,7 +271,7 @@ FileDir * FileDirController::GetFileInfo(const FILEDIR_CHAR *path)
 {
 	if (!path || path[0] == '\0') return NULL;
 
-#ifdef WIN32
+#ifdef _WIN32
 	DWORD dwFileAttributes = GetFileAttributes(path);
 	if (dwFileAttributes == INVALID_FILE_ATTRIBUTES)
 	{
@@ -284,7 +284,7 @@ FileDir * FileDirController::GetFileInfo(const FILEDIR_CHAR *path)
 		return NULL;
 	}
 #endif
-	
+
 	FileDir *fileDir = new FileDir();
 	fileDir->_fullPath = ustrdup(path);
 
@@ -299,7 +299,7 @@ FileDir * FileDirController::GetFileInfo(const FILEDIR_CHAR *path)
 		fileDir->_fileName = ustrdup(path);
 	}
 
-#ifdef WIN32
+#ifdef _WIN32
 	fileDir->_isFile = IS_REGULAR_FILE(dwFileAttributes);
 	fileDir->_isFolder = IS_FOLDER(dwFileAttributes);
 #else
@@ -330,11 +330,11 @@ void FileDirController::Close()
 FileDir * FileDirController::NextFile()
 {
 	if (_searchTree.empty()) return NULL;
-	
+
 	find_data_t *find = (find_data_t *)_searchTree.back();
-		
+
 	int fileNameLength;
-#ifdef WIN32
+#ifdef _WIN32
 	fileNameLength = (int)wcslen(find->data.cFileName);
 #else
 	fileNameLength = (int)strlen(find->entry->d_name);
@@ -345,7 +345,7 @@ FileDir * FileDirController::NextFile()
 
 	int fullPathLength = find->basePathLength + slashLength + fileNameLength;
 
-#ifdef WIN32
+#ifdef _WIN32
 	wchar_t *filePath = new FILEDIR_CHAR[fullPathLength + 1];
 	memcpy(filePath, find->basePath, sizeof(FILEDIR_CHAR) * find->basePathLength);
 	if (addSlash)
@@ -376,13 +376,13 @@ FileDir * FileDirController::NextFile()
 
 	FileDir *fileDir = new FileDir();
 	fileDir->_fullPath = filePath;
-#ifdef WIN32
+#ifdef _WIN32
 	fileDir->_fileName = wcsdup(find->data.cFileName); // Copy from the struct's memory
 #else
 	fileDir->_fileName = strdup(find->entry->d_name); // Copy from statically allocated memory
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 	fileDir->_isFile = IS_REGULAR_FILE(find->data.dwFileAttributes);
 	fileDir->_isFolder = IS_FOLDER(find->data.dwFileAttributes);
 #else
@@ -397,7 +397,7 @@ FileDir * FileDirController::NextFile()
 #endif
 
 	// Prepare for the next file
-#ifdef WIN32
+#ifdef _WIN32
 	if (FindNextFileW(find->handle, &find->data) == 0)
 	{
 		find->release();
